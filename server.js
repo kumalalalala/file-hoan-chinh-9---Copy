@@ -25,7 +25,7 @@ app.post('/register', (req, res) => {
     return res.status(400).send('Tên đăng nhập đã tồn tại');
   }
 
-  const hashedPassword = bcrypt.hashSync(password, 10);
+  const hashedPassword = bcrypt.hashSync(password, 12);
   users[username] = { password: hashedPassword };
 
   fs.writeFileSync(usersFile, JSON.stringify(users));
