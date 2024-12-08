@@ -14,17 +14,17 @@ body {
 .custom-btn {
   padding: 20px 44px;
   background-color: transparent;
-  border: 1px solid #141211;
+  border: 1px solid #9c6f59;
   border-radius: 50px;
   font-family: "Ubuntu Sans Mono", monospace;
-  color: #141211;
+  color: #9c6f59;
   font-size: 20px;
   text-decoration: none;
   transition: all 200ms;
 }
 
 .custom-btn:hover {
-  box-shadow: 0px 12px 1px #141211;
+  box-shadow: 0px 12px 1px #9c6f59;
 }
 
 .custom-btn:active {
@@ -48,6 +48,6 @@ h1, .text {
 }
 
 .text {
-  color: #141211;
+  color: #9c6f59;
   font-style: normal;
 }
