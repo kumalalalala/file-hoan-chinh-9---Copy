@@ -5,29 +5,80 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebRTC Video Call</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Ubuntu+Sans+Mono:ital,wght@0,400..700;1,400..700&display=swap');
-
         body {
-            margin: auto;
+            margin:0; padding:0;
             height: 100vh;
             width: 100vw;
             display: flex;
             justify-content: center;
             align-items: center;
             flex-direction: column;
-            background-color: #f5f1eb;
             font-family: "San Francisco", -apple-system, BlinkMacSystemFont, "Nunito Sans", sans-serif;
             box-sizing: border-box;
+            background: linear-gradient(135deg, #ff9a9e, #fad0c4, #fcb69f, #a1c4fd, #c2e9fb, #fad0c4, #ff9a9e);
+            background-size: 400% 400%;
+            transition: background-position 1.5s ease-in-out;
+            background-position: 0% 50%;
+            overflow: hidden;
+        }
+
+        body.show-register {
+            background-position: 100% 50%;
+        }
+
+        body.show-login {
+            background-position: 0% 50%;
+        }
+
+        @keyframes rainbowToSolid {
+            0% {
+                background: linear-gradient(135deg, #ff9a9e, #fad0c4, #fcb69f, #a1c4fd, #c2e9fb, #fad0c4, #ff9a9e);
+                background-size: 400% 400%;
+                background-position: var(--bg-position,0% 50%);
+                opacity: 1;
+            }
+            100% {
+                background: #9c6f59; /* Nền tĩnh cuối */
+                opacity: 1;
+            }
+        }
+
+        body.transition-to-call {
+            animation: rainbowToSolid 1.5s forwards ease-in-out;
+        }
+
+        body.show-call {
+            background: #9c6f59 !important;
+        }
+
+        body.show-call .auth-container {
+            display: none !important;
+        }
+
+        body.transition-to-call .auth-container {
+            transition: opacity 1s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Khi ở chế độ show-call (giao diện gọi), đổi màu nút để dễ thấy trên nền tối */
+        body.show-call .custom-btn {
+            border-color: #fff !important;
+            color: #fff !important;
+        }
+
+        body.show-call h1 {
+            color: #fff;
         }
 
         * {
-            box-sizing: inherit;
+            box-sizing: border-box;
         }
 
         video {
             margin: 10px;
             border: 1px solid #ddd;
-            background: black; /* Đảm bảo khung video màu đen nếu không có track video */
+            background: black;
         }
 
         .video-container {
@@ -45,7 +96,6 @@
             padding: 5px 10px;
             border-radius: 5px;
             font-size: 16px;
-            font-family: "Ubuntu Sans Mono", monospace;
         }
 
         #localUserName {
@@ -63,28 +113,29 @@
         .custom-btn {
             padding: 20px 44px;
             background-color: transparent;
-            border: 3px solid #141211;
+            border: 3px solid #9c6f59;
             border-radius: 50px;
             font-family: "Ubuntu Sans Mono", monospace;
-            color: #141211;
+            color: #9c6f59;
             font-size: 20px;
             text-decoration: none;
-            transition: all 200ms;
+            transition: all 0.3s ease;
         }
 
         .custom-btn:hover {
-            box-shadow: 0px 12px 1px #141211;
+            transform: scale(1.05);
+            box-shadow: 0px 12px 1px rgba(20,18,17,0.2);
         }
 
         .custom-btn:active {
-            transform: translateY(10px);
+            transform: scale(1);
             box-shadow: 0 0 0;
         }
 
         h1 {
             font-family: "Nixie One", system-ui;
             font-size: 32px;
-            color: #141211;
+            color: #9c6f59;
         }
 
         .container {
@@ -120,7 +171,7 @@
 
         .zoom-level {
             padding: 5px 10px;
-            background-color: #141211;
+            background-color: #9c6f59;
             color: white;
             border-radius: 5px;
             cursor: pointer;
@@ -147,17 +198,47 @@
             }
         }
 
-        /* Style cho form login/register */
         .auth-container {
             width: 300px;
             background: #fff;
             padding: 20px;
-            border: 2px solid #141211;
+            border: 3px solid #9c6f59;
             border-radius: 10px;
-            margin-bottom: 20px;
-            position: relative;
-            z-index: 9999;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            transition: transform 0.8s ease, opacity 0.8s ease;
+            z-index: 9998;
+        }
+
+        #loginForm, #registerForm {
+            display: block !important;
+        }
+
+        body.show-login #loginForm {
+            transform: translate(-50%, -50%) translateX(0%);
+            opacity: 1;
             pointer-events: auto;
+            z-index: 2;
+        }
+        body.show-login #registerForm {
+            transform: translate(-50%, -50%) translateX(120%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        body.show-register #loginForm {
+            transform: translate(-50%, -50%) translateX(-120%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+        body.show-register #registerForm {
+            transform: translate(-50%, -50%) translateX(0%);
+            opacity: 1;
+            pointer-events: auto;
+            z-index: 2;
         }
 
         .auth-container h2 {
@@ -170,7 +251,7 @@
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
-            border: 1px solid #141211;
+            border: 2px solid #9c6f59; /* viền đen */
             border-radius: 5px;
             font-size: 16px;
             line-height: normal;
@@ -184,23 +265,29 @@
             width: 100%;
             padding: 10px;
             border: none;
-            background: #141211;
+            background: #9c6f59;
             color: #fff;
             font-size: 16px;
             border-radius: 5px;
             cursor: pointer;
+            transition: transform 0.3s ease;
         }
 
         .auth-container button:hover {
-            background: #333;
+            transform: scale(1.05);
         }
 
         .auth-switch {
             text-align: center;
             margin-top: 10px;
             cursor: pointer;
-            color: #141211;
             text-decoration: underline;
+            transition: transform 0.3s ease;
+            color: #9c6f59; /* màu nâu cho link chuyển đổi */
+        }
+
+        .auth-switch:hover {
+            transform: scale(1.05);
         }
 
         .password-container {
@@ -214,6 +301,7 @@
             transform: translateY(-50%);
             cursor: pointer;
             user-select: none;
+            color: #9c6f59; /* đổi màu biểu tượng con mắt */
         }
 
         .custom-btn:disabled {
@@ -221,86 +309,84 @@
             cursor: not-allowed;
         }
 
-        /* Ban đầu chỉ hiện loginForm */
-        #loginForm {
-            display: block;
-        }
-
-        #registerForm {
-            display: none;
-        }
-
         #callInterface {
             display: none;
+            z-index: 9999; 
+            position: relative;
+        }
+
+        /* Đổi màu chữ cho tiêu đề */
+        .auth-container h2 {
+            color: #9c6f59;
         }
     </style>
 </head>
-<body>
-<div class="auth-container" id="loginForm">
-    <h2>Đăng nhập</h2>
-    <input type="text" id="loginUsername" placeholder="Tên đăng nhập">
-    <div class="password-container">
-        <input type="password" id="loginPassword" placeholder="Mật khẩu">
-        <span class="toggle-password" id="toggleLoginPassword">👁</span>
-    </div>
-    <button id="loginBtn">Đăng nhập</button>
-    <div class="auth-switch" id="showRegisterForm">Chưa có tài khoản? Đăng ký</div>
-    <div id="loginMessage" style="color:red;text-align:center;"></div>
-</div>
-
-<div class="auth-container" id="registerForm">
-    <h2>Đăng ký</h2>
-    <input type="text" id="registerUsername" placeholder="Tên đăng nhập">
-    <div class="password-container">
-        <input type="password" id="registerPassword" placeholder="Mật khẩu">
-        <span class="toggle-password" id="toggleRegisterPassword">👁</span>
-    </div>
-    <div class="password-container">
-        <input type="password" id="registerPasswordConfirm" placeholder="Xác nhận mật khẩu">
-        <span class="toggle-password" id="toggleRegisterPasswordConfirm">👁</span>
-    </div>
-    <button id="registerBtn">Đăng ký</button>
-    <div class="auth-switch" id="showLoginForm">Đã có tài khoản? Đăng nhập</div>
-    <div id="registerMessage" style="color:red;text-align:center;"></div>
-</div>
-
-<div id="callInterface">
-    <h1>Call by Egg</h1>
-    <div class="video-container">
-        <video id="localVideo" class="video" autoplay playsinline muted></video>
-        <div id="localUserName" class="user-name"></div>
-        <video id="remoteVideo" class="video" autoplay playsinline></video>
-        <div id="remoteUserName" class="user-name"></div>
-    </div>
-    <div id="buttons" class="container">
-        <div class="row">
-            <button id="startButton" class="custom-btn" disabled>Bắt đầu cuộc gọi</button>
-            <button id="muteButton" class="custom-btn">Tắt loa</button>
-            <button id="micButton" class="custom-btn">Tắt mic</button>
+<body class="show-login">
+    <div class="auth-container" id="loginForm">
+        <h2>Đăng nhập</h2>
+        <input type="text" id="loginUsername" placeholder="Tên đăng nhập">
+        <div class="password-container">
+            <input type="password" id="loginPassword" placeholder="Mật khẩu">
+            <span class="toggle-password" id="toggleLoginPassword">👁</span>
         </div>
-        <div class="row">
-            <button id="switchCameraButton" class="custom-btn">Đảo chiều camera</button>
-            <button id="stopCameraButton" class="custom-btn">Tắt camera</button>
+        <button id="loginBtn">Đăng nhập</button>
+        <div class="auth-switch" id="showRegisterForm">Chưa có tài khoản? Đăng ký</div>
+        <div id="loginMessage" style="color:red;text-align:center;"></div>
+    </div>
+
+    <div class="auth-container" id="registerForm">
+        <h2>Đăng ký</h2>
+        <input type="text" id="registerUsername" placeholder="Tên đăng nhập">
+        <div class="password-container">
+            <input type="password" id="registerPassword" placeholder="Mật khẩu">
+            <span class="toggle-password" id="toggleRegisterPassword">👁</span>
         </div>
-        <div class="row">
-            <button id="zoomButton" class="custom-btn">Zoom Camera</button>
-            <div id="zoomLevels">
-                <button class="zoom-level" data-zoom="1">1x</button>
-                <button class="zoom-level" data-zoom="2">2x</button>
-                <button class="zoom-level" data-zoom="3">3x</button>
-                <button class="zoom-level" data-zoom="4">4x</button>
-                <button class="zoom-level" data-zoom="5">5x</button>
-                <button class="zoom-level" data-zoom="6">6x</button>
-                <button class="zoom-level" data-zoom="7">7x</button>
-                <button class="zoom-level" data-zoom="8">8x</button>
-                <button class="zoom-level" data-zoom="9">9x</button>
-                <button class="zoom-level" data-zoom="10">10x</button>
+        <div class="password-container">
+            <input type="password" id="registerPasswordConfirm" placeholder="Xác nhận mật khẩu">
+            <span class="toggle-password" id="toggleRegisterPasswordConfirm">👁</span>
+        </div>
+        <button id="registerBtn">Đăng ký</button>
+        <div class="auth-switch" id="showLoginForm">Đã có tài khoản? Đăng nhập</div>
+        <div id="registerMessage" style="color:red;text-align:center;"></div>
+    </div>
+
+    <div id="callInterface">
+        <h1>Call by Egg</h1>
+        <div class="video-container">
+            <video id="localVideo" class="video" autoplay playsinline muted></video>
+            <div id="localUserName" class="user-name"></div>
+            <video id="remoteVideo" class="video" autoplay playsinline></video>
+            <div id="remoteUserName" class="user-name"></div>
+        </div>
+        <div id="buttons" class="container">
+            <div class="row">
+                <button id="startButton" class="custom-btn" disabled>Bắt đầu cuộc gọi</button>
+                <button id="muteButton" class="custom-btn">Tắt loa</button>
+                <button id="micButton" class="custom-btn">Tắt mic</button>
+            </div>
+            <div class="row">
+                <button id="switchCameraButton" class="custom-btn">Đảo chiều camera</button>
+                <button id="stopCameraButton" class="custom-btn">Tắt camera</button>
+            </div>
+            <div class="row">
+                <button id="zoomButton" class="custom-btn">Zoom Camera</button>
+                <div id="zoomLevels">
+                    <button class="zoom-level" data-zoom="1">1x</button>
+                    <button class="zoom-level" data-zoom="2">2x</button>
+                    <button class="zoom-level" data-zoom="3">3x</button>
+                    <button class="zoom-level" data-zoom="4">4x</button>
+                    <button class="zoom-level" data-zoom="5">5x</button>
+                    <button class="zoom-level" data-zoom="6">6x</button>
+                    <button class="zoom-level" data-zoom="7">7x</button>
+                    <button class="zoom-level" data-zoom="8">8x</button>
+                    <button class="zoom-level" data-zoom="9">9x</button>
+                    <button class="zoom-level" data-zoom="10">10x</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="script.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
