@@ -47,14 +47,12 @@ const configuration = {
 
 async function startStream() {
     try {
-        // Cố gắng lấy video + audio
         localStream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: currentCamera },
             audio: true
         });
     } catch (error) {
-        console.warn("Không tìm thấy camera hoặc không được cấp quyền camera. Sử dụng audio-only.");
-        // Nếu không được camera, thử lại chỉ audio
+        console.warn("Không có camera, chỉ audio");
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     }
     localVideo.srcObject = localStream;
@@ -119,7 +117,8 @@ socket.on('candidate', (candidate) => {
 });
 
 startButton.onclick = async () => {
-    if (loginForm.style.display !== 'none' || registerForm.style.display !== 'none') {
+    // Thay vì kiểm tra form, kiểm tra loggedInUser
+    if (!loggedInUser) {
         alert("Bạn cần đăng nhập trước khi bắt đầu cuộc gọi.");
         return;
     }
@@ -183,31 +182,46 @@ document.querySelectorAll('.zoom-level').forEach(button => {
     };
 });
 
-toggleLoginPassword.onclick = () => {
-    loginPassword.type = (loginPassword.type === 'password') ? 'text' : 'password';
-};
-
-toggleRegisterPassword.onclick = () => {
-    registerPassword.type = (registerPassword.type === 'password') ? 'text' : 'password';
-};
-
-toggleRegisterPasswordConfirm.onclick = () => {
-    registerPasswordConfirm.type = (registerPasswordConfirm.type === 'password') ? 'text' : 'password';
-};
-
-showRegisterForm.onclick = () => {
+function showRegisterFormFunc() {
+    document.body.classList.remove('show-login');
+    document.body.classList.add('show-register');
     loginForm.style.display = 'none';
     registerForm.style.display = 'block';
+}
+
+function showLoginFormFunc() {
+    document.body.classList.remove('show-register');
+    document.body.classList.add('show-login');
+    registerForm.style.display = 'none';
+    loginForm.style.display = 'block';
+}
+
+showRegisterForm.onclick = () => {
     loginMessage.textContent = '';
     registerMessage.textContent = '';
+    showRegisterFormFunc();
 };
 
 showLoginForm.onclick = () => {
-    registerForm.style.display = 'none';
-    loginForm.style.display = 'block';
     loginMessage.textContent = '';
     registerMessage.textContent = '';
+    showLoginFormFunc();
 };
+
+function handleTogglePassword(element) {
+    element.addEventListener('click', () => {
+        const input = element.parentElement.querySelector('input');
+        if (input.type === 'password') {
+            input.type = 'text';
+        } else {
+            input.type = 'password';
+        }
+    });
+}
+
+handleTogglePassword(toggleLoginPassword);
+handleTogglePassword(toggleRegisterPassword);
+handleTogglePassword(toggleRegisterPasswordConfirm);
 
 loginBtn.onclick = async () => {
     const username = loginUsername.value.trim();
@@ -227,10 +241,14 @@ loginBtn.onclick = async () => {
         loginMessage.textContent = 'Đăng nhập thành công!';
         loggedInUser = username;
         localUserNameDiv.textContent = loggedInUser;
-        loginForm.style.display = 'none';
-        registerForm.style.display = 'none';
-        callInterface.style.display = 'block';
-        startButton.disabled = false;
+        document.body.classList.add('transition-to-call');
+        setTimeout(() => {
+            document.body.classList.add('show-call');
+            loginForm.remove();
+            registerForm.remove();
+            callInterface.style.display = 'block';
+            startButton.disabled = false;
+        }, 1500);
     } else {
         loginMessage.style.color = 'red';
         loginMessage.textContent = text;
@@ -262,7 +280,7 @@ registerBtn.onclick = async () => {
         registerMessage.style.color = 'green';
         registerMessage.textContent = 'Đăng ký thành công! Hãy đăng nhập.';
         setTimeout(() => {
-            showLoginForm.click();
+            showLoginFormFunc();
         }, 2000);
     } else {
         registerMessage.style.color = 'red';
